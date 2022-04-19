@@ -11,7 +11,7 @@ export async function generateChart(config: ChartConfiguration) {
 	return buffer;
 }
 
-function randomHexColor(num: number) {
+export function randomHexColor(num: number) {
 	const hue = num * 137.508; // use golden angle approximation
 	return `hsl(${hue},50%,75%)`;
 }

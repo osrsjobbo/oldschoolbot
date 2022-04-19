@@ -25,6 +25,7 @@ export default class extends Task {
 			if (!module.includes(nodeModules) && extname(module) !== '.node') {
 				if (module.includes('OldSchoolBotClient')) continue;
 				if (module.includes(`dist${sep}index`)) continue;
+				if (module.includes('chart')) continue;
 				delete require.cache[module];
 			}
 		}

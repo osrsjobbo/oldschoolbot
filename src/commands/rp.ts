@@ -1,6 +1,7 @@
 import { codeBlock, inlineCode } from '@discordjs/builders';
 import { Duration, Time } from '@sapphire/time-utilities';
 import { Type } from '@sapphire/type';
+import { ChartConfiguration } from 'chart.js';
 import { MessageAttachment, MessageEmbed, MessageOptions, TextChannel, Util } from 'discord.js';
 import { notEmpty, uniqueArr } from 'e';
 import { ArrayActions, CommandStore, KlasaClient, KlasaMessage, KlasaUser, Stopwatch, util } from 'klasa';
@@ -45,8 +46,10 @@ import {
 	isRaidsActivity,
 	isTobActivity,
 	itemNameFromID,
-	stringMatches
+	stringMatches,
+	toKMB
 } from '../lib/util';
+import { generateChart } from '../lib/util/chart';
 import getOSItem from '../lib/util/getOSItem';
 import getUsersPerkTier from '../lib/util/getUsersPerkTier';
 import { logError } from '../lib/util/logError';
@@ -954,6 +957,74 @@ WHERE bank->>'${item.id}' IS NOT NULL;`);
 					guildID: null
 				});
 				return msg.channel.send('Globally synced slash commands.');
+			}
+			case 'itemgraph': {
+				if (!input || typeof input !== 'string') return;
+				const item = getOSItem(input);
+				let results = (
+					await prisma.economyItem.findMany({
+						where: {
+							item_id: item.id
+						},
+						orderBy: {
+							date: 'desc'
+						}
+					})
+				).filter((_, index) => index % 2 === 0);
+
+				const options: ChartConfiguration = {
+					type: 'line',
+					data: {
+						labels: results.map(i => i.date),
+						datasets: [
+							{
+								data: results.map(i => Number(i.quantity)),
+								label: item.name
+							}
+						]
+					},
+					options: {
+						plugins: {
+							title: { display: true, text: 'Economy Item Graph' },
+							datalabels: {
+								font: {
+									weight: 'bolder'
+								},
+								formatter(value, ctx) {
+									if (ctx.dataIndex % 5 === 0) return toKMB(value);
+									return '';
+								}
+							}
+						},
+						scales: {
+							x: {
+								type: 'time',
+								time: {
+									displayFormats: {
+										millisecond: 'MMM dd',
+										second: 'MMM dd',
+										minute: 'MMM dd',
+										hour: 'MMM dd',
+										day: 'MMM dd',
+										week: 'MMM dd',
+										month: 'MMM dd',
+										quarter: 'MMM dd',
+										year: 'MMM dd'
+									}
+								}
+							},
+							y: {
+								ticks: {
+									maxTicksLimit: 3
+								}
+							}
+						}
+					}
+				};
+
+				const buffer = await generateChart(options);
+
+				return msg.channel.send({ files: [new MessageAttachment(buffer)] });
 			}
 		}
 	}
