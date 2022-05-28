@@ -1,6 +1,7 @@
 import { Activity, activity_type_enum, loot_track_type, Prisma, PrismaClient } from '@prisma/client';
 import { Time } from 'e';
 import { Bank } from 'oldschooljs';
+import { PrismaClient as RobochimpPrismaClient } from 'robochimp';
 
 import { ItemBank } from '../types';
 import { ActivityTaskData } from '../types/minions';
@@ -10,10 +11,12 @@ declare global {
 	namespace NodeJS {
 		interface Global {
 			prisma: PrismaClient | undefined;
+			robochimpClient: RobochimpPrismaClient | undefined;
 		}
 	}
 }
 export const prisma = global.prisma || new PrismaClient();
+export const robochimpPrisma = global.robochimpClient || new RobochimpPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') global.prisma = prisma;
 

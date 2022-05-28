@@ -1,14 +1,17 @@
 {
 	"scripts": {
 		"lint": "eslint \"{src,tests}/**/*.ts\" --fix",
-		"build:tsc": "tsc -p src",
-		"build": "yarn wipedist && yarn build:tsc",
 		"wipedist": "rimraf \"dist/\"",
 		"start": "yarn build && concurrently \"tsc -w -p src\" \"node dist/\"",
+		"dev": "yarn wipedist && tsc -w -p src",
+
+		"build": "concurrently \"yarn wipedist\" \"yarn build:schema\" && yarn build:tsc",
+		"build:tsc": "tsc -p src",
+		"build:schema": "concurrently \"npx prisma generate --schema prisma/schema.prisma\" \"npx prisma generate --schema prisma/robochimp_schema.prisma\"",
+
 		"test": "concurrently \"tsc -p src\" \"yarn test:lint\" \"yarn test:unit\"",
 		"test:lint": "eslint \"{src,tests}/**/*.ts\"",
-		"test:unit": "jest --coverage --maxWorkers=4",
-		"dev": "yarn wipedist && tsc -w -p src"
+		"test:unit": "jest --coverage --maxWorkers=4"
 	},
 	"dependencies": {
 		"@discordjs/builders": "^0.11.0",
