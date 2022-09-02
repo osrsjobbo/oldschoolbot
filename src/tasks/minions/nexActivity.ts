@@ -3,8 +3,9 @@ import { MessageEmbed } from 'discord.js';
 import { Task } from 'klasa';
 
 import { NEX_ID } from '../../lib/constants';
+import announceLoot from '../../lib/minions/functions/announceLoot';
 import { trackLoot } from '../../lib/settings/prisma';
-import { handleNexKills } from '../../lib/simulation/nex';
+import { handleNexKills, purpleNexItems } from '../../lib/simulation/nex';
 import { NexTaskOptions } from '../../lib/types/minions';
 import { formatOrdinal } from '../../lib/util/formatOrdinal';
 import { sendToChannelID } from '../../lib/util/webhook';
@@ -28,6 +29,9 @@ export default class extends Task {
 			const user = await this.client.users.fetch(uID);
 			await user.addItemsToBank({ items: uLoot, collectionLog: true });
 			await user.incrementMonsterScore(NEX_ID, quantity - userDetails.find(i => i[0] === uID)![2].length);
+			if (purpleNexItems.some(i => uLoot.has(i))) {
+				announceLoot({ user, monsterID: NEX_ID, notifyDrops: purpleNexItems, loot: uLoot });
+			}
 		}
 
 		await trackLoot({
