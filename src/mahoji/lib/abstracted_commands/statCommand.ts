@@ -971,6 +971,24 @@ ${bank
 	.join('\n')}`
 			};
 		}
+	},
+	{
+		name: 'Item Log',
+		perkTierNeeded: PerkTier.Four,
+		run: async () => {
+			const res = await prisma.
+			return {
+				content: `**Item Log**
+${bank
+	.items()
+	.filter(isCLItem)
+	.sort(sorts.quantity)
+	.reverse()
+	.slice(0, 10)
+	.map((ent, ind) => `${++ind}. ${ent[0].name}: ${ent[1]}`)
+	.join('\n')}`
+			};
+		}
 	}
 ] as const;
 

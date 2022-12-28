@@ -4,7 +4,9 @@ import { Bank } from 'oldschooljs';
 import { bingoIsActive, determineBingoProgress, onFinishTile } from '../../mahoji/lib/bingo';
 import { mahojiUserSettingsUpdate } from '../../mahoji/settingsUpdate';
 import { deduplicateClueScrolls } from '../clues/clueUtils';
+import { allCLItemsFiltered } from '../data/Collections';
 import { handleNewCLItems } from '../handleNewCLItems';
+import { prisma } from '../settings/prisma';
 import { filterLootReplace } from '../slayer/slayerUtil';
 import { ItemBank } from '../types';
 import { sanitizeBank } from '../util';
@@ -146,6 +148,18 @@ export async function transactItemsFromBank({
 		}
 
 		handleNewCLItems({ itemsAdded, user: settings, previousCL, newCL });
+		const lootItemsToTrack: Prisma.LootItemCreateInput[] = itemsAdded
+			.items()
+			.filter(i => allCLItemsFiltered.includes(i[0].id))
+			.map(i => ({
+				item_id: i[0].id,
+				quantity: i[1],
+				new_cl_item: !previousCL.has(i[0].id),
+				amount_in_cl: newCL.amount(i[0].id)
+			}));
+		if (lootItemsToTrack.length > 0) {
+			await prisma.lootItem.createMany({ data: lootItemsToTrack });
+		}
 
 		return {
 			previousCL,
