@@ -1,7 +1,8 @@
 import { Activity, activity_type_enum, Prisma, PrismaClient } from '@prisma/client';
+import { objectEntries } from 'e';
 
 import { CLIENT_ID, production } from '../../config';
-import { ActivityTaskData } from '../types/minions';
+import type { ActivityTaskData, ActivityTaskOptions } from '../types/minions';
 
 declare global {
 	namespace NodeJS {
@@ -32,9 +33,46 @@ prisma.$on('query' as any, (_query: any) => {
 	queryCountStore.value++;
 });
 
-export function convertStoredActivityToFlatActivity(activity: Activity): ActivityTaskData {
+const ACTIVITY_DATA_COMPRESSION_MAPPINGS = [
+	{
+		from: 'monsterID',
+		to: 'mi'
+	},
+	{
+		from: 'quantity',
+		to: 'q'
+	},
+	{
+		from: 'burstOrBarrage',
+		to: 'bob'
+	},
+	{
+		from: 'cannonMulti',
+		to: 'cmu'
+	},
+	{
+		from: 'usingCannon',
+		to: 'uc'
+	},
+	{
+		from: 'plantsName',
+		to: 'pn'
+	}
+] as const;
+
+export function convertStoredActivityToFlatActivity(_activity: Activity): ActivityTaskData {
+	let activity = { ..._activity };
+	let data: Prisma.JsonObject = {};
+	for (const [key, value] of Object.entries(activity.data as Prisma.JsonObject)) {
+		const compressedMapping = ACTIVITY_DATA_COMPRESSION_MAPPINGS.find(m => m.to === key);
+		if (!compressedMapping) {
+			data[key] = value;
+		} else {
+			data[compressedMapping.from] = value;
+		}
+	}
 	return {
-		...(activity.data as Prisma.JsonObject),
+		...data,
 		type: activity.type as activity_type_enum,
 		userID: activity.user_id.toString(),
 		channelID: activity.channel_id.toString(),
@@ -42,6 +80,33 @@ export function convertStoredActivityToFlatActivity(activity: Activity): Activit
 		finishDate: activity.finish_date.getTime(),
 		id: activity.id
 	};
+}
+
+let sqlStr = `BEGIN;
+`;
+for (const { from, to } of ACTIVITY_DATA_COMPRESSION_MAPPINGS) {
+	sqlStr += `UPDATE activity SET data = (data::jsonb - '${from}' || jsonb_build_object('${to}', data->>'${from}'))::json WHERE data::jsonb ? '${from}';\n`;
+}
+sqlStr += '\nCOMMIT;\n';
+console.log(sqlStr);
+
+export function convertFlatActivityToStoredActivity(rawData: Partial<ActivityTaskOptions>): Prisma.InputJsonObject {
+	let data: Record<string, number | string> = { ...rawData };
+	delete data.type;
+	delete data.userID;
+	delete data.id;
+	delete data.channelID;
+	delete data.duration;
+
+	for (const [key, value] of objectEntries(data)) {
+		const compressedMapping = ACTIVITY_DATA_COMPRESSION_MAPPINGS.find(m => m.from === key);
+		if (compressedMapping) {
+			delete data[key];
+			data[compressedMapping.to] = value;
+		}
+	}
+
+	return data;
 }
 
 /**

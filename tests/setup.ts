@@ -5,10 +5,14 @@ import { mockDeep } from 'jest-mock-extended';
 
 import { mockMUser, mockUserMap } from './utils';
 
-jest.mock('../src/lib/settings/prisma.ts', () => ({
-	__esModule: true,
-	prisma: mockDeep<PrismaClient>()
-}));
+jest.mock('../src/lib/settings/prisma.ts', () => {
+	const originalModule = jest.requireActual('../src/lib/settings/prisma.ts');
+	return {
+		__esModule: true,
+		...originalModule,
+		prisma: mockDeep<PrismaClient>()
+	};
+});
 
 // @ts-ignore Mock
 global.globalClient = { guilds: { cache: new Map() } } as any;

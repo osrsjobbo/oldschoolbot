@@ -1,4 +1,4 @@
-import { prisma } from '../settings/prisma';
+import { convertFlatActivityToStoredActivity, prisma } from '../settings/prisma';
 import { activitySync, getActivityOfUser } from '../settings/settings';
 import { ActivityTaskOptions } from '../types/minions';
 import { UserError } from '../UserError';
@@ -27,17 +27,6 @@ export default async function addSubTaskToActivityTask<T extends ActivityTaskOpt
 
 	const finishDate = new Date(Date.now() + duration);
 
-	let __newData: Partial<ActivityTaskOptions> = { ...taskToAdd };
-	delete __newData.type;
-	delete __newData.userID;
-	delete __newData.id;
-	delete __newData.channelID;
-	delete __newData.duration;
-
-	let newData: Omit<ActivityTaskOptions, 'finishDate' | 'id' | 'type' | 'channelID' | 'userID' | 'duration'> = {
-		...__newData
-	};
-
 	try {
 		const createdActivity = await prisma.activity.create({
 			data: {
@@ -46,7 +35,7 @@ export default async function addSubTaskToActivityTask<T extends ActivityTaskOpt
 				finish_date: finishDate,
 				completed: false,
 				type: taskToAdd.type,
-				data: newData,
+				data: convertFlatActivityToStoredActivity(taskToAdd),
 				group_activity: isGroupActivity(taskToAdd),
 				channel_id: BigInt(taskToAdd.channelID),
 				duration
