@@ -56,6 +56,7 @@ export async function harvestCommand({
 	const upgradeType = null;
 	let returnMessageStr = '';
 	const boostStr = [];
+	const missedBoostStr = [];
 
 	const storeHarvestablePlant = patch.lastPlanted;
 	const plant = findPlant(patch.lastPlanted)!;
@@ -76,11 +77,15 @@ export async function harvestCommand({
 	if (userHasGracefulEquipped(user)) {
 		boostStr.push('10% time for Graceful');
 		duration *= 0.9;
+	} else {
+		missedBoostStr.push('10% time for Graceful');
 	}
 
 	if (user.hasEquippedOrInBank(['Ring of endurance'])) {
 		boostStr.push('10% time for Ring of Endurance');
 		duration *= 0.9;
+	} else {
+		missedBoostStr.push('10% time for Ring of Endurance');
 	}
 
 	const maxTripLength = calcMaxTripLength(user, 'Farming');
@@ -93,16 +98,21 @@ export async function harvestCommand({
 
 	if (user.hasEquippedOrInBank(['Magic secateurs'])) {
 		boostStr.push('10% crop yield for Magic Secateurs');
+	} else {
+		missedBoostStr.push('10% crop yield for Magic Secateurs');
 	}
 
 	if (user.hasEquippedOrInBank(['Farming cape'])) {
 		boostStr.push('5% crop yield for Farming Skillcape');
+	} else {
+		missedBoostStr.push('5% crop yield for Farming Skillcape');
 	}
 
 	returnMessageStr = `${user.minionName} is now harvesting ${patch.lastQuantity}x ${storeHarvestablePlant}.
 It'll take around ${formatDuration(duration)} to finish.
 	
-${boostStr.length > 0 ? '**Boosts**: ' : ''}${boostStr.join(', ')}`;
+${boostStr.length > 0 ? '**Boosts**: ' : ''}${boostStr.join(', ')}
+${missedBoostStr.length > 0 ? '**Missed Boosts**: ' : ''}${missedBoostStr.join(', ')}`;
 
 	await addSubTaskToActivityTask<FarmingActivityTaskOptions>({
 		plantsName: patch.lastPlanted,
@@ -149,6 +159,7 @@ export async function farmingPlantCommand({
 
 	const infoStr: string[] = [];
 	const boostStr: string[] = [];
+	const missedBoostStr: string[] = [];
 
 	const plant = findPlant(plantName);
 
@@ -217,11 +228,15 @@ export async function farmingPlantCommand({
 	if (userHasGracefulEquipped(user)) {
 		boostStr.push('10% time for Graceful');
 		duration *= 0.9;
+	} else {
+		missedBoostStr.push('10% time for Graceful');
 	}
 
 	if (user.hasEquipped('Ring of endurance')) {
 		boostStr.push('10% time for Ring of Endurance');
 		duration *= 0.9;
+	} else {
+		missedBoostStr.push('10% time for Ring of Endurance');
 	}
 
 	for (const [diary, tier] of [[ArdougneDiary, ArdougneDiary.elite]] as const) {
@@ -229,6 +244,8 @@ export async function farmingPlantCommand({
 		if (has) {
 			boostStr.push(`4% time for ${diary.name} ${tier.name}`);
 			duration *= 0.96;
+		} else {
+			missedBoostStr.push(`4% time for ${diary.name} ${tier.name}`);
 		}
 	}
 
@@ -281,9 +298,14 @@ export async function farmingPlantCommand({
 	} else if (patchType.patchPlanted) {
 		if (user.hasEquippedOrInBank(['Magic secateurs'])) {
 			boostStr.push('10% crop yield for Magic Secateurs');
+		} else {
+			missedBoostStr.push('10% crop yield for Magic Secateurs');
 		}
+
 		if (user.hasEquippedOrInBank(['Farming cape'])) {
 			boostStr.push('5% crop yield for Farming Skillcape');
+		} else {
+			missedBoostStr.push('5% crop yield for Farming Skillcape');
 		}
 
 		infoStr.unshift(
@@ -324,9 +346,10 @@ export async function farmingPlantCommand({
 	});
 
 	return `${infoStr.join(' ')}
-It'll take around ${formatDuration(duration)} to finish.
+It'll take around ${formatDuration(duration)} to finish. boostStr length: ${boostStr.length}
 
-${boostStr.length > 0 ? '**Boosts**: ' : ''}${boostStr.join(', ')}`;
+${boostStr.length > 0 ? '**Boosts**: ' : ''}${boostStr.join(', ')}
+${missedBoostStr.length > 0 ? '**Missed Boosts**: ' : ''}${missedBoostStr.join(', ')}`;
 }
 
 export async function compostBinCommand(
