@@ -44,21 +44,39 @@ export async function zalcanoCommand(user: MUser, channelID: string) {
 	const kcLearned = Math.min(100, calcWhatPercent(kc, 100));
 
 	const boosts = [];
+	const missedBoosts = [];
+
 	let baseTime = Time.Minute * 6;
 	baseTime = reduceNumByPercent(baseTime, kcLearned / 6);
-	boosts.push(`${(kcLearned / 6).toFixed(2)}% boost for experience`);
+	
+	if(kcLearned > 0) {
+		boosts.push(`${(kcLearned / 6).toFixed(2)}% boost for experience`);
+	}
+
+	if(kcLearned != 100) {
+		missedBoosts.push(`${((100-kcLearned) / 6).toFixed(2)}% boost for experience`);
+	}
 
 	const skills = user.skillsAsLevels;
 	const skillPercentage = skills.mining + skills.smithing;
 
 	baseTime = reduceNumByPercent(baseTime, skillPercentage / 40);
-	boosts.push(`${skillPercentage / 40}% boost for levels`);
 
-	if (!userHasGracefulEquipped(user)) {
-		baseTime *= 1.15;
-		boosts.push('-15% time penalty for not having graceful equipped');
+	if(skillPercentage > 0) {
+		boosts.push(`${skillPercentage / 40}% boost for levels`);
 	}
 
+	if((skillPercentage / 40) < 4.95) {
+		missedBoosts.push(`${(4.95 - (skillPercentage / 40)).toFixed(2)}% boost for levels`);
+	}
+
+	if(userHasGracefulEquipped(user)) {
+		boosts.push('15% time saving for having graceful equipped');
+	} else {
+		baseTime *= 1.15;
+		missedBoosts.push('15% time saving for having graceful equipped');
+	}
+	
 	let healAmountNeeded = 7 * 12;
 	if (kc > 100) healAmountNeeded = 1 * 12;
 	else if (kc > 50) healAmountNeeded = 3 * 12;
@@ -87,5 +105,8 @@ export async function zalcanoCommand(user: MUser, channelID: string) {
 
 	return `${user.minionName} is now off to kill Zalcano ${quantity}x times, their trip will take ${formatDuration(
 		duration
-	)}. (${formatDuration(baseTime)} per kill). Removed ${foodRemoved}.\n\n**Boosts:** ${boosts.join(', ')}.`;
+	)}. (${formatDuration(baseTime)} per kill). Removed ${foodRemoved}.
+
+${boosts.length > 0 ? '**Boosts**: ' : ''}${boosts.join(', ')}	
+${missedBoosts.length > 0 ? '**Missed Boosts**: ' : ''}${missedBoosts.join(', ')}`;
 }
