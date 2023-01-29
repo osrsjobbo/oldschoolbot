@@ -4,8 +4,9 @@ import { SkillsEnum } from 'oldschooljs/dist/constants';
 
 import { Eatables } from '../../../lib/data/eatables';
 import { warmGear } from '../../../lib/data/filterables';
+import { MUserClass } from '../../../lib/MUser';
 import { MinigameActivityTaskOptions } from '../../../lib/types/minions';
-import { formatDuration } from '../../../lib/util';
+// import { formatDuration } from '../../../lib/util';
 import addSubTaskToActivityTask from '../../../lib/util/addSubTaskToActivityTask';
 import { calcMaxTripLength } from '../../../lib/util/calcMaxTripLength';
 import { updateBankSetting } from '../../../lib/util/updateBankSetting';
@@ -83,7 +84,97 @@ export async function wintertodtCommand(user: MUser, channelID: string) {
 		type: 'Wintertodt'
 	});
 
-	return `${user.minionName} is now off to kill Wintertodt ${quantity}x times, their trip will take ${formatDuration(
-		durationPerTodt * quantity
-	)}. (${formatDuration(durationPerTodt)} per todt)\n\n${messages.join(', ')}.`;
+	let appliedBoosts = applyBoosts(newBoosts, user);
+	return `New calculated boost is ${appliedBoosts.multiplier}
+	
+${appliedBoosts.receivedBoostMessages.length > 0 ? `**Boosts:** ` + appliedBoosts.receivedBoostMessages.join(', ') : ''}
+${appliedBoosts.missedBoostMessages.length > 0 ? `**Missed Boosts:** ` + appliedBoosts.missedBoostMessages.join(', ') : ''}
+`;``
+
+	// return `${user.minionName} is now off to kill Wintertodt ${quantity}x times, their trip will take ${formatDuration(
+	// 	durationPerTodt * quantity
+	// )}. (${formatDuration(durationPerTodt)} per todt)\n\n${messages.join(', ')}.`;
 }
+
+export function applyBoosts(boosts: any, user: MUser) {
+	let receivedBoostMessages: string[] = [];
+	let missedBoostMessages: string[] = [];
+	let multiplier = 1;
+
+	boosts.filter((i: { enabled: number; }) => i.enabled == 1).forEach((boost: { ttkMultiplier: () => { (): any; new(): any; maxBoost: number; actual: { (arg0: MUserClass): number; new(): any; }; }; desc: () => any; }) => {
+		let actualBoost = Math.min(boost.ttkMultiplier().maxBoost, boost.ttkMultiplier().actual(user));
+
+		if(actualBoost > 0) {
+			receivedBoostMessages.push(`${actualBoost.toFixed(2)}% ${boost.desc()}`);
+		}
+
+		if(actualBoost < boost.ttkMultiplier().maxBoost) {
+			missedBoostMessages.push(`${(boost.ttkMultiplier().maxBoost - actualBoost).toFixed(2)}% ${boost.desc()}`);
+		}
+
+		multiplier = reduceNumByPercent(multiplier, actualBoost);
+	});
+
+	return {
+		multiplier: multiplier,
+		receivedBoostMessages: receivedBoostMessages,
+		missedBoostMessages: missedBoostMessages
+	}
+}
+
+const newBoosts: {
+	name: string;
+	enabled: boolean,
+	ttkMultiplier?: () => {
+		minBoost: number,
+		maxBoost: number,
+		actual: (options: { user: MUser }) => number
+	};
+	desc: () => string;
+}[] = [
+	{
+		name: 'Woodcutting Boost',
+		enabled: true,
+		ttkMultiplier: () => {
+			return {
+				minBoost: 0,
+				maxBoost: 10,
+				actual: ({ user }) => {
+					console.log(user.skillsAsLevels); // undefined
+
+
+					return 5;
+					//return ((user.skillsAsLevels.woodcutting + 1) / 10);
+				}
+			}
+		},
+		desc: () => {
+			return "boost for Woodcutting level";
+		}
+	},
+	{
+		name: 'Warm Clothing',
+		enabled: false,
+		ttkMultiplier: () => {
+			return {
+				minBoost: 0,
+				maxBoost: 20,
+				actual: ({ user }) => {
+					let warmGearAmount = 0;
+
+					for (const piece of warmGear) {
+						if (user.gear.skilling.hasEquipped([piece])) {
+							warmGearAmount++;
+						}
+						if (warmGearAmount >= 4) break;
+					}
+
+					return warmGearAmount * 5;
+				}
+			}
+		},
+		desc: () => {
+			return "boost for equipped Warm gear";
+		}
+	}
+];
