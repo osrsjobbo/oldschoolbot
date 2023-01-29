@@ -346,7 +346,7 @@ export async function farmingPlantCommand({
 	});
 
 	return `${infoStr.join(' ')}
-It'll take around ${formatDuration(duration)} to finish. boostStr length: ${boostStr.length}
+It'll take around ${formatDuration(duration)} to finish.
 
 ${boostStr.length > 0 ? '**Boosts**: ' : ''}${boostStr.join(', ')}
 ${missedBoostStr.length > 0 ? '**Missed Boosts**: ' : ''}${missedBoostStr.join(', ')}`;
