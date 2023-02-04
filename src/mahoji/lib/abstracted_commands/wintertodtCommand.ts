@@ -4,7 +4,6 @@ import { SkillsEnum } from 'oldschooljs/dist/constants';
 
 import { Eatables } from '../../../lib/data/eatables';
 import { warmGear } from '../../../lib/data/filterables';
-import { MUserClass } from '../../../lib/MUser';
 import { MinigameActivityTaskOptions } from '../../../lib/types/minions';
 // import { formatDuration } from '../../../lib/util';
 import addSubTaskToActivityTask from '../../../lib/util/addSubTaskToActivityTask';
@@ -101,7 +100,7 @@ export function applyBoosts(boosts: any, user: MUser) {
 	let missedBoostMessages: string[] = [];
 	let multiplier = 1;
 
-	boosts.filter((i: { enabled: number; }) => i.enabled == 1).forEach((boost: { ttkMultiplier: () => { (): any; new(): any; maxBoost: number; actual: { (arg0: MUserClass): number; new(): any; }; }; desc: () => any; }) => {
+	for(const boost of boosts.filter((i: { enabled: number; }) => i.enabled == 1)) {
 		let actualBoost = Math.min(boost.ttkMultiplier().maxBoost, boost.ttkMultiplier().actual(user));
 
 		if(actualBoost > 0) {
@@ -113,7 +112,7 @@ export function applyBoosts(boosts: any, user: MUser) {
 		}
 
 		multiplier = reduceNumByPercent(multiplier, actualBoost);
-	});
+	}
 
 	return {
 		multiplier: multiplier,
@@ -128,7 +127,9 @@ const newBoosts: {
 	ttkMultiplier?: () => {
 		minBoost: number,
 		maxBoost: number,
-		actual: (options: { user: MUser }) => number
+		actual: (options: { 
+			user: MUser;
+		}) => number
 	};
 	desc: () => string;
 }[] = [
@@ -139,9 +140,8 @@ const newBoosts: {
 			return {
 				minBoost: 0,
 				maxBoost: 10,
-				actual: ({ user }) => {
-					console.log(user.skillsAsLevels); // undefined
-
+				actual: (user) => {
+					console.log(user.skillsAsLevels);
 
 					return 5;
 					//return ((user.skillsAsLevels.woodcutting + 1) / 10);
